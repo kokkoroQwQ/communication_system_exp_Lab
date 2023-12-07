@@ -66,10 +66,10 @@ def bussiness_process(visitor_id:str, info:str) -> None:
     if info == '*':     # 返回上一级菜单
         menu = menu[:-1] if menu != '1' else menu
         visitor_menu[visitor_id] = menu
-        OM_API.OM_MenuPlay(http_client, visitor_id, menu)
+        OM_API.OM_menuPlay(http_client, visitor_id, menu)
         return
     elif info == '0':   # 重复当前菜单
-        OM_API.OM_MenuPlay(http_client, visitor_id, menu)
+        OM_API.OM_menuPlay(http_client, visitor_id, menu)
         return
     elif info == '9':   # 人工服务
         return
@@ -83,7 +83,7 @@ def bussiness_process(visitor_id:str, info:str) -> None:
         else:
             menu += info
             visitor_menu[visitor_id] = menu
-            OM_API.OM_MenuPlay(http_client, visitor_id, menu)
+            OM_API.OM_menuPlay(http_client, visitor_id, menu)
 
     elif menu == '11':  # 选择科室
         if info not in ['1', '2', '3', '4', '5']:
@@ -93,7 +93,7 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             visitor_data[visitor_id]['department'] = info
             menu += '1'
             visitor_menu[visitor_id] = menu
-            OM_API.OM_MenuPlay(http_client, visitor_id, menu)
+            OM_API.OM_menuPlay(http_client, visitor_id, menu)
 
     elif menu == '111':  # 选择普通 or 专家门诊
         if info not in ['1', '2']:
@@ -103,7 +103,7 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             visitor_data[visitor_id]['level'] = info
             menu += '1'
             visitor_menu[visitor_id] = menu
-            OM_API.OM_MenuPlay(http_client, visitor_id, menu)
+            OM_API.OM_menuPlay(http_client, visitor_id, menu)
     
     elif menu == '1111':  # 选择时间段
         if info not in ['1', '2', '3', '4']:
@@ -114,7 +114,7 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             if queryQuota() < 1:    # 无名额，挂号失败, 重新选择时间
                 OM_API.OM_voicePlay(http_client, visitor_id, OM_API.regFail)
                 # OM_API.OM_voicePlay(http_client, visitor_id, OM_API.selectAnotherTime)
-                OM_API.OM_MenuPlay(http_client, visitor_id, menu)
+                OM_API.OM_menuPlay(http_client, visitor_id, menu)
             else:   # 有名额，让用户输入身份证号码
                 menu += '1'
                 visitor_menu[visitor_id] = menu
@@ -174,7 +174,7 @@ class MyHTTPRequestHandler(SimpleHTTPRequestHandler):
         if root.attributes['attribute'].value == 'INCOMING':
             visitor_data[visitor_id] = {}
             visitor_menu[visitor_id] = '1'
-            OM_API.OM_MenuPlay(http_client, visitor_id, visitor_menu[visitor_id])
+            OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
         
         elif root.attributes['attribute'].value == 'EndOfAnn':
             pass
@@ -185,5 +185,6 @@ class MyHTTPRequestHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    OM_API.OM_menuConfig(http_client)
     httpd = HTTPServer(HOST_ADDR, MyHTTPRequestHandler)
     httpd.serve_forever()

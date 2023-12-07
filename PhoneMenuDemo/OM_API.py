@@ -47,7 +47,7 @@ def OM_addVoice(cmd:str, new_cmd:str) -> str:
     if len(cmd) == 0:    return new_cmd
     else:   return cmd + "+" + new_cmd
 
-def OM_MenuPlay(web_handle:HTTPConnection, visitor_id:str, menu:str) -> None:
+def OM_menuPlay(web_handle:HTTPConnection, visitor_id:str, menu:str) -> None:
     
     cmd_list = []
     if   menu == '1':
@@ -96,6 +96,41 @@ def OM_voicePlay(web_handle:HTTPConnection, visitor_id:str, voice_cmd:str) -> No
     voicefile = dom.createElement('voicefile')
     voicefile.appendChild(dom.createTextNode(voice_cmd))
     root.appendChild(voicefile)
+
+    print(dom.toprettyxml(encoding='utf-8').decode())
+
+    web_handle.connect()
+    web_handle.request('POST', '/xml', dom.toprettyxml(encoding='utf-8'))
+    web_handle.close()
+
+def OM_menuConfig(web_handle:HTTPConnection) -> None:
+    assert type(web_handle) == HTTPConnection
+
+    dom = minidom.Document()
+    root = dom.createElement('Control')
+    root.setAttribute('attribute', 'Assign')
+    dom.appendChild(root)
+
+    menu = dom.createElement('menu')
+    menu.setAttribute('id', '1')
+
+    voicefile = dom.createElement('voicefile')
+    voicefile.appendChild(dom.createTextNode("welcome"))
+    menu.appendChild(voicefile)
+    
+    repeat = dom.createElement('repeat')
+    repeat.appendChild(dom.createTextNode("1"))
+    menu.appendChild(repeat)
+
+    infolength = dom.createElement('infolength')
+    infolength.appendChild(dom.createTextNode("12"))
+    menu.appendChild(infolength)
+
+    exit = dom.createElement('exit')
+    exit.appendChild(dom.createTextNode("#"))
+    menu.appendChild(exit)
+
+    root.appendChild(menu)
 
     print(dom.toprettyxml(encoding='utf-8').decode())
 
