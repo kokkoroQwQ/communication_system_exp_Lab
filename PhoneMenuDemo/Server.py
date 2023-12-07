@@ -99,6 +99,6 @@ def transfer_menu(visitor_id, menu_id, vf):
 
 
 if __name__ == '__main__':
-    httpd = HTTPServer(('10.230.32.122', 8989), MenuHandler)
+    httpd = HTTPServer(('10.230.32.134', 8989), MenuHandler)
     httpd.serve_forever()
     # test()
