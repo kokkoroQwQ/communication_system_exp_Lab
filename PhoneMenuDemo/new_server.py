@@ -14,18 +14,6 @@ HOST_ADDR = ("10.230.32.134", 8989) # your machine's ip and port
 # Don't modify the following content 
 # unless you do understand what will happen
 
-MENU_VOICE_MAP = {
-    '1': 'user_top',
-    '2': 'user_date',
-    '3': 'user_doctor_level',
-    '4': 'user_registering',
-    '5': 'user_success',
-    '6': 'user_fail',
-    '7': 'user_thank_bye',
-    '8': 'user_timeout'
-}
-
-
 import sqlite3
 import OM_API
 from http.server import HTTPServer, SimpleHTTPRequestHandler
