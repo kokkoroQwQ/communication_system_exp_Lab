@@ -15,6 +15,8 @@ chooseTop           = "user_chooseTop"
 chooseRegisterTop   = "user_chooseRegisterTop"
 chooseLastMenu      = "user_chooseLastMenu"
 
+chooseConfirmCancel = "user_chooseConfirmCancel"   # 确认取消请按1
+
 inputIDnumber       = "user_inputIDnumber"
 error               = "user_error"
 byebye              = "user_byebye"
@@ -28,6 +30,8 @@ regFail             = "user_regFail"
 selectAnotherTime   = "user_selectAnotherTime"
 
 confirm             = "user_confirm"        # 确认请按#
+
+canceled            = "user_canceled"       # 已取消预约
 
 year                = "user_year"
 month               = "user_month"
@@ -58,6 +62,8 @@ def OM_menuPlay(web_handle:HTTPConnection, visitor_id:str, menu:str) -> None:
         cmd_list = [chooseLevel, chooseLastMenu, chooseRepeat, confirm]
     elif menu == '1111':
         cmd_list = [chooseTime, chooseLastMenu, chooseRepeat, confirm,]
+    elif menu == '11111':
+        cmd_list = [inputIDnumber]
     elif menu == '12':
         cmd_list = [inputIDnumber]
     else:

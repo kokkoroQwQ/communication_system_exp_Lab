@@ -9,13 +9,16 @@
 
 OM_IP = "10.16.18.150"  # your OM device's ip
 HOST_ADDR = ("10.230.32.134", 8989) # your machine's ip and port
+AMOUNT_LIMIT = 100
 
 #########################################################################
 # Don't modify the following content 
 # unless you do understand what will happen
 
 import sqlite3
-import OM_API
+import OM_API, DB_API
+from DB_API import *
+from utils import *
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPConnection
 from xml.dom import minidom
@@ -28,24 +31,23 @@ department_map = {
     '5':OM_API.pifuke
 }
 
+level_voice_map = {
+    '1': OM_API.putong,
+    '2': OM_API.zhuanjia
+}
+
+time_voice_map = {
+    1: OM_API.today,
+    2: OM_API.tomorrow,
+    3: OM_API.morning,
+    4: OM_API.afternoon
+}
+
 http_client = HTTPConnection(OM_IP)
 db_connect = sqlite3.connect("registers.db")
 db_cusor = db_connect.cursor()
 visitor_menu = {}
-visitor_appointment_detail = {}
 visitor_data = {}
-
-
-
-def queryQuota() -> int:
-    return 1
-
-def queryTimeAndID() -> str:
-    return None
-
-def DB_register() -> None:
-    pass
-        
 
 def bussiness_process(visitor_id:str, info:str) -> None:
     menu = visitor_menu[visitor_id]
@@ -59,11 +61,19 @@ def bussiness_process(visitor_id:str, info:str) -> None:
     elif info == '0':   # 重复当前菜单
         OM_API.OM_menuPlay(http_client, visitor_id, menu)
         return
+    elif info == '8':
+        visitor_menu[visitor_id] = '1'
+        OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
+        return
     elif info == '9':   # 人工服务
         return
     elif info == 'T':   # 超时无按键输入挂断
         return
 
+
+    '''
+    语音菜单处理逻辑
+    '''
     if menu == '1':     # 挂号还是取消挂号
         if info not in ['1', '2']:
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
@@ -97,16 +107,12 @@ def bussiness_process(visitor_id:str, info:str) -> None:
         if info not in ['1', '2', '3', '4']:
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
-        else:   # 查询数据库
+        else:   # 下一级菜单
+            today_date = ''
+            tomarrow_date = ''
             visitor_data[visitor_id]['time'] = info
-            if queryQuota() < 1:    # 无名额，挂号失败, 重新选择时间
-                OM_API.OM_voicePlay(http_client, visitor_id, OM_API.regFail)
-                # OM_API.OM_voicePlay(http_client, visitor_id, OM_API.selectAnotherTime)
-                OM_API.OM_menuPlay(http_client, visitor_id, menu)
-            else:   # 有名额，让用户输入身份证号码
-                menu += '1'
-                visitor_menu[visitor_id] = menu
-                OM_API.OM_voicePlay(http_client, visitor_id, OM_API.inputIDnumber)
+            visitor_menu[visitor_id] += '1'
+            OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
             
     elif menu == '11111':   # 挂号分支里的输入身份证号码
         if len(info) != 11:     # 身份证格式不正确，输入异常
@@ -114,33 +120,86 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
             visitor_data[visitor_id]['id_num'] = info
-            query_result = queryTimeAndID()     # '1' '2' '3' '4' '5'
-            if query_result == None:
-                DB_register()
+            # 查询指定的科室、级别、时间已有的预约数量
+            amount = DB_queryDLTCount(db_connect, visitor_data[visitor_id])
+            # 查询数据库中是否有已选时间段的同一身份证的挂号记录
+            exist_regs = DB_queryIDAtSameTime(db_connect, visitor_data[visitor_id])
+
+            if amount < AMOUNT_LIMIT and len(exist_regs) == 0:      # 可以成功挂号的情况
                 voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.regSuccess)
                 voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.byebye)
                 OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
-            else:
-                department_voice = department_map[query_result]
-                voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.existData)
-                voice_cmd = OM_API.OM_addVoice(voice_cmd, department_voice)
-                voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.pleaseCancel)
-                voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.byebye)
+
+            elif amount >= AMOUNT_LIMIT:    # 预约满了
+                cmd_list = [OM_API.regFail, OM_API.selectAnotherTime, OM_API.byebye]
+                for x in cmd_list:
+                    voice_cmd = OM_API.OM_addVoice(voice_cmd, x)
                 OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
-    
+
+            elif len(exist_regs) >= 0:      # 已存在同身份证预约
+                department_voice = department_map[exist_regs[0][0]]
+                cmd_list = [OM_API.existData, department_voice, OM_API.pleaseCancel, OM_API.byebye]
+                for x in cmd_list:
+                    voice_cmd = OM_API.OM_addVoice(voice_cmd, x)
+                OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
+
     elif menu == '12':  # 查询挂号服务
         if len(info) != 11:     # 身份证格式不正确，输入异常
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
             visitor_data[visitor_id]['id_num'] = info
+            # 获得数据库中，该身份证号的挂号记录
+            regs = DB_API.DB_queryID(db_connect, visitor_data[visitor_id]['id_num'])
+
+            # 暂时只处理第一条记录
+            time_string = regs[0][2]
+
+            time_voice = ""
+            date_parse = parse_date_string(time_string)  # 今天 or 明天 / 上午 or 下午
+            if date_parse == 1:     # 今天上午
+                time_voice = time_voice_map[1] + '+' + time_voice_map[3]
+            elif date_parse == 2:   # 今天下午
+                time_voice = time_voice_map[1] + '+' + time_voice_map[4]
+            elif date_parse == 3:   # 明天上午
+                time_voice = time_voice_map[2] + '+' + time_voice_map[3]
+            elif date_parse == 4:   # 明天下午
+                time_voice = time_voice_map[2] + '+' + time_voice_map[4]
+            else:   # 挂号过期或异常
+                pass
+            
+            if time_string == "":   # 存在有效挂号记录
+                visitor_menu[visitor_id] += '1'
+                department_voice = department_map[regs[0][0]]
+                level_voice = level_voice_map[regs[0][1]]
+
+                cmd_list = [OM_API.existData, department_voice, level_voice, time_voice, 
+                            OM_API.chooseConfirmCancel, OM_API.chooseRepeat, OM_API.chooseTop]
+                for x in cmd_list:
+                    voice_cmd = OM_API.OM_addVoice(voice_cmd, x)
+                OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
+
+            else:   # 不存在有效挂号记录
+                cmd_list = [OM_API.noData, OM_API.byebye]
+                for x in cmd_list:
+                    voice_cmd = OM_API.OM_addVoice(voice_cmd, x)
+                OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
+
+
+    elif menu == '121': # 是否取消挂号
+        if info not in ['1']:   # 输入有误
+            voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
+            OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
+        else:
+            cmd_list = [OM_API.canceled, OM_API.byebye]
+            for x in cmd_list:
+                voice_cmd = OM_API.OM_addVoice(voice_cmd, x)
+            OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
 
 
 
 
-
-
-
+# 用于构建http服务器需要实现的子类
 class MyHTTPRequestHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
@@ -159,20 +218,21 @@ class MyHTTPRequestHandler(SimpleHTTPRequestHandler):
         visitor = visitor[0]
         visitor_id = visitor.attributes['id'].value
 
-        if root.attributes['attribute'].value == 'INCOMING':
+        # 根据不同事件类型分别处理
+        if root.attributes['attribute'].value == 'INCOMING':    # 来电
             visitor_data[visitor_id] = {}
             visitor_menu[visitor_id] = '1'
             OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
         
-        elif root.attributes['attribute'].value == 'EndOfAnn':
+        elif root.attributes['attribute'].value == 'EndOfAnn':  # 语音播放完了
             pass
 
-        elif root.attributes['attribute'].value == 'DTMF':
+        elif root.attributes['attribute'].value == 'DTMF':      # 按键输入
             info = visitor.getElementsByTagName('info')[0].childNodes[0].data[:-1]
-            bussiness_process(visitor_id, info)
+            bussiness_process(visitor_id, info)                 # 业务逻辑
 
 
 if __name__ == "__main__":
-    OM_API.OM_menuConfig(http_client)
-    httpd = HTTPServer(HOST_ADDR, MyHTTPRequestHandler)
-    httpd.serve_forever()
+    OM_API.OM_menuConfig(http_client)       # 设置语音菜单
+    httpd = HTTPServer(HOST_ADDR, MyHTTPRequestHandler)     # 初始化http服务器
+    httpd.serve_forever()       # http 服务保持运行
