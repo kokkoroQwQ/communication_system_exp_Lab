@@ -9,7 +9,8 @@
 
 OM_IP = "10.16.18.150"  # your OM device's ip
 HOST_ADDR = ("10.230.32.134", 8989) # your machine's ip and port
-AMOUNT_LIMIT = 100
+AMOUNT_LIMIT = 100  # register amount limit 每个 科室-门诊级别-时间段 挂号的数量限额
+HUMAN_SERVE_PHONE_NUMBER = '5900'
 
 #########################################################################
 # Don't modify the following content 
@@ -17,7 +18,6 @@ AMOUNT_LIMIT = 100
 
 import sqlite3
 import OM_API, DB_API
-from DB_API import *
 from utils import *
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http.client import HTTPConnection
@@ -36,13 +36,6 @@ level_voice_map = {
     '2': OM_API.zhuanjia
 }
 
-time_voice_map = {
-    1: OM_API.today,
-    2: OM_API.tomorrow,
-    3: OM_API.morning,
-    4: OM_API.afternoon
-}
-
 http_client = HTTPConnection(OM_IP)
 db_connect = sqlite3.connect("registers.db")
 db_cusor = db_connect.cursor()
@@ -53,6 +46,9 @@ def bussiness_process(visitor_id:str, info:str) -> None:
     menu = visitor_menu[visitor_id]
     voice_cmd = OM_API.OM_createVoiceCmd()
 
+    '''
+    特殊按键处理
+    '''
     if info == '*':     # 返回上一级菜单
         menu = menu[:-1] if menu != '1' else menu
         visitor_menu[visitor_id] = menu
@@ -66,6 +62,7 @@ def bussiness_process(visitor_id:str, info:str) -> None:
         OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
         return
     elif info == '9':   # 人工服务
+        OM_API.OM_transferPhone(http_client, visitor_id, HUMAN_SERVE_PHONE_NUMBER)
         return
     elif info == 'T':   # 超时无按键输入挂断
         return
@@ -79,9 +76,8 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
-            menu += info
-            visitor_menu[visitor_id] = menu
-            OM_API.OM_menuPlay(http_client, visitor_id, menu)
+            visitor_menu[visitor_id] += info
+            OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
 
     elif menu == '11':  # 选择科室
         if info not in ['1', '2', '3', '4', '5']:
@@ -89,9 +85,8 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
             visitor_data[visitor_id]['department'] = info
-            menu += '1'
-            visitor_menu[visitor_id] = menu
-            OM_API.OM_menuPlay(http_client, visitor_id, menu)
+            visitor_menu[visitor_id] += '1'
+            OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
 
     elif menu == '111':  # 选择普通 or 专家门诊
         if info not in ['1', '2']:
@@ -99,12 +94,11 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
             visitor_data[visitor_id]['level'] = info
-            menu += '1'
-            visitor_menu[visitor_id] = menu
-            OM_API.OM_menuPlay(http_client, visitor_id, menu)
+            visitor_menu[visitor_id] += '1'
+            OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
     
     elif menu == '1111':  # 选择时间段
-        if info not in ['1', '2', '3', '4']:
+        if info not in ['1', '2', '3', '4', '5', '6']:
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:   # 下一级菜单
@@ -121,11 +115,12 @@ def bussiness_process(visitor_id:str, info:str) -> None:
         else:
             visitor_data[visitor_id]['id_num'] = info
             # 查询指定的科室、级别、时间已有的预约数量
-            amount = DB_queryDLTCount(db_connect, visitor_data[visitor_id])
+            amount = DB_API.DB_queryDLTCount(db_connect, visitor_data[visitor_id])
             # 查询数据库中是否有已选时间段的同一身份证的挂号记录
-            exist_regs = DB_queryIDAtSameTime(db_connect, visitor_data[visitor_id])
+            exist_regs = DB_API.DB_queryIDAtSameTime(db_connect, visitor_data[visitor_id])
 
             if amount < AMOUNT_LIMIT and len(exist_regs) == 0:      # 可以成功挂号的情况
+                DB_API.DB_insert(db_connect, visitor_data[visitor_id])
                 voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.regSuccess)
                 voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.byebye)
                 OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
@@ -156,15 +151,19 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             time_string = regs[0][2]
 
             time_voice = ""
-            date_parse = parse_date_string(time_string)  # 今天 or 明天 / 上午 or 下午
-            if date_parse == 1:     # 今天上午
-                time_voice = time_voice_map[1] + '+' + time_voice_map[3]
-            elif date_parse == 2:   # 今天下午
-                time_voice = time_voice_map[1] + '+' + time_voice_map[4]
-            elif date_parse == 3:   # 明天上午
-                time_voice = time_voice_map[2] + '+' + time_voice_map[3]
-            elif date_parse == 4:   # 明天下午
-                time_voice = time_voice_map[2] + '+' + time_voice_map[4]
+            period = time_period(time_string)  # 今天 or 明天 or 后天 / 上午 or 下午
+            if period == 5:     # 今天上午
+                time_voice = OM_API.today + '+' + OM_API.morning
+            elif period == 6:   # 今天下午
+                time_voice = OM_API.today + '+' + OM_API.afternoon
+            elif period == 1:   # 明天上午
+                time_voice = OM_API.tomorrow + '+' + OM_API.morning
+            elif period == 2:   # 明天下午
+                time_voice = OM_API.tomorrow + '+' + OM_API.afternoon
+            elif period == 3:   # 后天上午
+                time_voice = OM_API.afterTomorrow + '+' + OM_API.morning
+            elif period == 4:   # 后天下午
+                time_voice = OM_API.afterTomorrow + '+' + OM_API.afternoon
             else:   # 挂号过期或异常
                 pass
             
@@ -191,6 +190,8 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
+            # 删除挂号记录
+            DB_API.DB_delete(db_connect, visitor_data[visitor_id]['id_num'])
             cmd_list = [OM_API.canceled, OM_API.byebye]
             for x in cmd_list:
                 voice_cmd = OM_API.OM_addVoice(voice_cmd, x)

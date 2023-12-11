@@ -4,8 +4,7 @@ user_chooseDepartment
 user_chooseLevel
 选择普通门诊请按1，专家门诊请按2
 
-user_chooseTime
-选择明天上午请按1，明天下午请按2，后天上午请按3，后天下午请按4
+
 
 user_chooseTop
 返回首页菜单请按8
@@ -79,6 +78,9 @@ user_today
 user_tomorrow
 明天
 
+user_afterTomorrow
+后天
+
 user_putong
 普通门诊
 
@@ -89,7 +91,10 @@ user_chooseConfirmCancel
 确认取消请按1
 
 user_chooseHuman
-选择人工服务请按0
+选择人工服务请按9
 
 user_canceled
 已取消预约
+
+user_chooseTime
+选择明天上午请按1，明天下午请按2，后天上午请按3，后天下午请按4

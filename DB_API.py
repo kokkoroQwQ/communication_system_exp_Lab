@@ -75,21 +75,21 @@ def DB_delete(conn:Connection, id_num:str) -> None:
     cursor.execute(sql, query_list)
     conn.commit()
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    data = {
-        'department': '1',
-        'level': '3',
-        'time': '2023-07-19',
-        'id_num': '450881199910235675'
-    }
+#     data = {
+#         'department': '1',
+#         'level': '3',
+#         'time': '2023-07-19',
+#         'id_num': '450881199910235675'
+#     }
 
-    conn = sqlite3.connect('mydatabase.db')  
-    # DB_insert(conn, data)
-    DB_delete(conn, '450881199910235675')
-    rows = DB_query(conn, data)
-    # print(row)
-    for x in rows:
-        print(x)
+#     conn = sqlite3.connect('mydatabase.db')  
+#     # DB_insert(conn, data)
+#     DB_delete(conn, '450881199910235675')
+#     rows = DB_query(conn, data)
+#     # print(row)
+#     for x in rows:
+#         print(x)
 
-    print(DB_queryDLTCount(conn, data))
+#     print(DB_queryDLTCount(conn, data))

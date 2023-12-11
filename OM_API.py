@@ -43,6 +43,15 @@ erke    = "user_erke"
 wuguanke = "user_wuguanke"
 pifuke  = "user_pifuke" 
 
+today       = "user_today"
+tomorrow    = "user_tomorrow"
+afterTomorrow = "user_afterTomorrow"
+morning      = "user_morning"
+afternoon   = "user_afternoon"
+
+putong   = "user_putong"
+zhuanjia = "user_zhuanjia"
+
 
 def OM_createVoiceCmd() -> str:
     return ""
@@ -143,3 +152,34 @@ def OM_menuConfig(web_handle:HTTPConnection) -> None:
     web_handle.connect()
     web_handle.request('POST', '/xml', dom.toprettyxml(encoding='utf-8'))
     web_handle.close()
+
+
+def OM_transferPhone(web_handle:HTTPConnection, visitor_id:str, phone_num:str) -> None:
+    '''
+    控制 OM 设备转接指定会话到指定分机
+    '''
+    # input security check
+    assert type(web_handle) == HTTPConnection
+    assert type(visitor_id) == str and visitor_id != ""
+    assert type(phone_num)  == str and phone_num  != ""
+    assert phone_num.count('+') <= 9
+
+    dom = minidom.Document()
+    root = dom.createElement('Transfer')
+    root.setAttribute('attribute', 'Connect')
+    dom.appendChild(root)
+
+    visitor = dom.createElement('visitor')
+    visitor.setAttribute('id', visitor_id)
+    root.appendChild(visitor)
+
+    ext = dom.createElement('ext')
+    ext.setAttribute('id', phone_num)
+    root.appendChild(ext)
+
+    print(dom.toprettyxml(encoding='utf-8').decode())
+
+    web_handle.connect()
+    web_handle.request('POST', '/xml', dom.toprettyxml(encoding='utf-8'))
+    web_handle.close()
+
