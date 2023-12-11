@@ -94,13 +94,13 @@ if __name__ == "__main__":
         'department': '1',
         'level': '2',
         'time': '2023-12-12-0',
-        'id_num': '450881199910235674'
+        'id_num': '123456202312121234'
     }
 
     conn = DB_init()
     # DB_insert(conn, data)
-    # DB_delete(conn, '450881199910235674')
-    rows = DB_queryID(conn, "450881199910235674")
+    # DB_delete(conn, '123456202312121234')
+    rows = DB_queryID(conn, "123456202312121234")
     # print(row)
     for x in rows:
         print(x)
