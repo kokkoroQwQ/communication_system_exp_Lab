@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3, os
 from sqlite3.dbapi2 import Cursor, Connection
 
 
@@ -75,21 +75,34 @@ def DB_delete(conn:Connection, id_num:str) -> None:
     cursor.execute(sql, query_list)
     conn.commit()
 
-# if __name__ == "__main__":
+def DB_createTable(conn:Connection) -> None:
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE mytable  
+                (department TEXT, level TEXT, time TEXT, id TEXT)''')
 
-#     data = {
-#         'department': '1',
-#         'level': '3',
-#         'time': '2023-07-19',
-#         'id_num': '450881199910235675'
-#     }
+def DB_init() -> Connection:
+    if os.path.isfile("registers.db"):
+        return sqlite3.connect("registers.db")
+    else:
+        conn = sqlite3.connect("registers.db")
+        DB_createTable(conn)
+        return conn
 
-#     conn = sqlite3.connect('mydatabase.db')  
-#     # DB_insert(conn, data)
-#     DB_delete(conn, '450881199910235675')
-#     rows = DB_query(conn, data)
-#     # print(row)
-#     for x in rows:
-#         print(x)
+if __name__ == "__main__":
 
-#     print(DB_queryDLTCount(conn, data))
+    data = {
+        'department': '1',
+        'level': '2',
+        'time': '2023-12-12-0',
+        'id_num': '450881199910235674'
+    }
+
+    conn = DB_init()
+    # DB_insert(conn, data)
+    # DB_delete(conn, '450881199910235674')
+    rows = DB_queryID(conn, "450881199910235674")
+    # print(row)
+    for x in rows:
+        print(x)
+
+    # print(DB_queryDLTCount(conn, data))

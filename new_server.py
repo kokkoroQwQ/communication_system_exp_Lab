@@ -8,9 +8,9 @@
 # custom config here
 
 OM_IP = "10.16.18.150"  # your OM device's ip
-HOST_ADDR = ("10.230.32.134", 8989) # your machine's ip and port
+HOST_ADDR = ("10.230.32.31", 8989) # your machine's ip and port
 AMOUNT_LIMIT = 100  # register amount limit 每个 科室-门诊级别-时间段 挂号的数量限额
-HUMAN_SERVE_PHONE_NUMBER = '5900'
+HUMAN_SERVE_PHONE_NUMBER = '6214'
 
 #########################################################################
 # Don't modify the following content 
@@ -37,7 +37,7 @@ level_voice_map = {
 }
 
 http_client = HTTPConnection(OM_IP)
-db_connect = sqlite3.connect("registers.db")
+db_connect = DB_API.DB_init()
 db_cusor = db_connect.cursor()
 visitor_menu = {}
 visitor_data = {}
@@ -109,7 +109,7 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
             
     elif menu == '11111':   # 挂号分支里的输入身份证号码
-        if len(info) != 11:     # 身份证格式不正确，输入异常
+        if len(info) != 18:     # 身份证格式不正确，输入异常
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
@@ -139,7 +139,7 @@ def bussiness_process(visitor_id:str, info:str) -> None:
                 OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
 
     elif menu == '12':  # 查询挂号服务
-        if len(info) != 11:     # 身份证格式不正确，输入异常
+        if len(info) != 18:     # 身份证格式不正确，输入异常
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:
@@ -147,33 +147,35 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             # 获得数据库中，该身份证号的挂号记录
             regs = DB_API.DB_queryID(db_connect, visitor_data[visitor_id]['id_num'])
 
-            # 暂时只处理第一条记录
-            time_string = regs[0][2]
+            print(regs)
 
             time_voice = ""
-            period = time_period(time_string)  # 今天 or 明天 or 后天 / 上午 or 下午
-            if period == 5:     # 今天上午
-                time_voice = OM_API.today + '+' + OM_API.morning
-            elif period == 6:   # 今天下午
-                time_voice = OM_API.today + '+' + OM_API.afternoon
-            elif period == 1:   # 明天上午
-                time_voice = OM_API.tomorrow + '+' + OM_API.morning
-            elif period == 2:   # 明天下午
-                time_voice = OM_API.tomorrow + '+' + OM_API.afternoon
-            elif period == 3:   # 后天上午
-                time_voice = OM_API.afterTomorrow + '+' + OM_API.morning
-            elif period == 4:   # 后天下午
-                time_voice = OM_API.afterTomorrow + '+' + OM_API.afternoon
-            else:   # 挂号过期或异常
-                pass
+            if len(regs) != 0:
+                # 暂时只处理第一条记录
+                time_string = regs[0][2]
+                period = time_period(time_string)  # 今天 or 明天 or 后天 / 上午 or 下午
+                if period == 5:     # 今天上午
+                    time_voice = OM_API.today + '+' + OM_API.morning
+                elif period == 6:   # 今天下午
+                    time_voice = OM_API.today + '+' + OM_API.afternoon
+                elif period == 1:   # 明天上午
+                    time_voice = OM_API.tomorrow + '+' + OM_API.morning
+                elif period == 2:   # 明天下午
+                    time_voice = OM_API.tomorrow + '+' + OM_API.afternoon
+                elif period == 3:   # 后天上午
+                    time_voice = OM_API.afterTomorrow + '+' + OM_API.morning
+                elif period == 4:   # 后天下午
+                    time_voice = OM_API.afterTomorrow + '+' + OM_API.afternoon
+                else:   # 挂号过期或异常
+                    pass
             
-            if time_string == "":   # 存在有效挂号记录
+            if time_voice != "":   # 存在有效挂号记录
                 visitor_menu[visitor_id] += '1'
                 department_voice = department_map[regs[0][0]]
                 level_voice = level_voice_map[regs[0][1]]
 
                 cmd_list = [OM_API.existData, department_voice, level_voice, time_voice, 
-                            OM_API.chooseConfirmCancel, OM_API.chooseRepeat, OM_API.chooseTop]
+                            OM_API.chooseConfirmCancel, OM_API.chooseTop]
                 for x in cmd_list:
                     voice_cmd = OM_API.OM_addVoice(voice_cmd, x)
                 OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
@@ -234,6 +236,7 @@ class MyHTTPRequestHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    DB_API.DB_init()                        # 初始化数据库
     OM_API.OM_menuConfig(http_client)       # 设置语音菜单
     httpd = HTTPServer(HOST_ADDR, MyHTTPRequestHandler)     # 初始化http服务器
     httpd.serve_forever()       # http 服务保持运行

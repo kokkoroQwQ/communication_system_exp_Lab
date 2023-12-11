@@ -138,7 +138,7 @@ def OM_menuConfig(web_handle:HTTPConnection) -> None:
     menu.appendChild(repeat)
 
     infolength = dom.createElement('infolength')
-    infolength.appendChild(dom.createTextNode("12"))
+    infolength.appendChild(dom.createTextNode("19"))
     menu.appendChild(infolength)
 
     exit = dom.createElement('exit')

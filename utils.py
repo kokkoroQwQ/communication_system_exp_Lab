@@ -30,20 +30,20 @@ def time_period(input_str):
     # 判断是上午还是下午  
     if int(period) == 0:  
         if current_time.hour < 12:  
-            return 1 if input_date == today else 3 if input_date == today + datetime.timedelta(days=1) else 5  
+            return 5 if input_date == today else 1 if input_date == today + datetime.timedelta(days=1) else 3  
         else:  
-            return 2 if input_date == today else 4 if input_date == today + datetime.timedelta(days=1) else 6  
+            return 6 if input_date == today else 2 if input_date == today + datetime.timedelta(days=1) else 4  
     else:  
         if current_time.hour < 12:  
-            return 2 if input_date == today else 4 if input_date == today + datetime.timedelta(days=1) else 6  
+            return 6 if input_date == today else 2 if input_date == today + datetime.timedelta(days=1) else 4  
         else:  
-            return 1 if input_date == today else 3 if input_date == today + datetime.timedelta(days=1) else 5
+            return 5 if input_date == today else 1 if input_date == today + datetime.timedelta(days=1) else 3
 
-# print(time_period("2023-12-12-0"))  # 输出 1，表示今天上午  
-# print(time_period("2023-12-12-1"))  # 输出 2，表示今天下午  
-# print(time_period("2023-12-13-0"))  # 输出 3，表示明天上午  
-# print(time_period("2023-12-13-1"))  # 输出 4，表示明天下午  
-# print(time_period("2023-12-14-0"))  # 输出 5，表示后天上午  
-# print(time_period("2023-12-14-1"))  # 输出 6，表示后天下午  
+# print(time_period("2023-12-12-0"))  # 输出 5，表示今天上午  
+# print(time_period("2023-12-12-1"))  # 输出 6，表示今天下午  
+# print(time_period("2023-12-13-0"))  # 输出 1，表示明天上午  
+# print(time_period("2023-12-13-1"))  # 输出 2，表示明天下午  
+# print(time_period("2023-12-14-0"))  # 输出 3，表示后天上午  
+# print(time_period("2023-12-14-1"))  # 输出 4，表示后天下午  
 # print(time_period("2023-12-11-0"))  # 输出 -1，表示已过期  
 # print(time_period("2023-12-12-2"))  # 输出 -2，表示其他情况
