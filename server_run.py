@@ -1,5 +1,6 @@
 #########################################################################
 # create on 2023-11-29
+# last modified on 2023-12-12
 # @author: Violeta, email: violet2021@foxmail.com
 # brief: a hospital appointment server through handling OM IVR menu
 # Note: shutdown your firewall before you activate this script
@@ -7,10 +8,10 @@
 #########################################################################
 # custom config here
 
-OM_IP = "10.16.18.150"  # your OM device's ip
-HOST_ADDR = ("10.230.32.31", 8989) # your machine's ip and port
+OM_IP = "10.16.18.150"  # your OM device's ip 你的 OM 设备 IP
+HOST_ADDR = ("10.230.32.31", 8989) # your machine's ip and port 你的 PC 的 IP 和端口
 AMOUNT_LIMIT = 100  # register amount limit 每个 科室-门诊级别-时间段 挂号的数量限额
-HUMAN_SERVE_PHONE_NUMBER = '6214'
+HUMAN_SERVE_PHONE_NUMBER = '6214' # 人工服务的分机号
 
 #########################################################################
 # Don't modify the following content 
