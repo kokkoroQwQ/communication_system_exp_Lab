@@ -17,7 +17,7 @@ HUMAN_SERVE_PHONE_NUMBER = '6214' # 人工服务的分机号
 # Don't modify the following content 
 # unless you do understand what will happen
 
-import sqlite3
+import sqlite3, datetime
 import OM_API, DB_API
 from utils import *
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -99,13 +99,24 @@ def bussiness_process(visitor_id:str, info:str) -> None:
             OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
     
     elif menu == '1111':  # 选择时间段
-        if info not in ['1', '2', '3', '4', '5', '6']:
+        if info not in ['1', '2', '3', '4']:
             voice_cmd = OM_API.OM_addVoice(voice_cmd, OM_API.error)
             OM_API.OM_voicePlay(http_client, visitor_id, voice_cmd)
         else:   # 下一级菜单
-            today_date = ''
-            tomarrow_date = ''
-            visitor_data[visitor_id]['time'] = info
+            today = datetime.date.today()  
+            tomarrow = today + datetime.timedelta(days=1)
+            after_tomorrow = today + datetime.timedelta(days=2)
+
+            if info == '1':
+                visitor_data[visitor_id]['time'] = str(tomarrow) + '-0'
+            elif info == '2':
+                visitor_data[visitor_id]['time'] = str(tomarrow) + '-1'
+            elif info == '3':
+                visitor_data[visitor_id]['time'] = str(after_tomorrow) + '-0'
+            elif info == '4':
+                visitor_data[visitor_id]['time'] = str(after_tomorrow) + '-1'
+            else:
+                pass
             visitor_menu[visitor_id] += '1'
             OM_API.OM_menuPlay(http_client, visitor_id, visitor_menu[visitor_id])
             

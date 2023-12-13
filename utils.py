@@ -18,7 +18,6 @@ def time_period(input_str):
     # 获取当前日期和时间  
     import datetime  
     today = datetime.date.today()  
-    current_time = datetime.datetime.now().time()  
       
     # 解析输入的日期  
     input_date = datetime.date(int(year), int(month), int(day))  
@@ -29,15 +28,9 @@ def time_period(input_str):
       
     # 判断是上午还是下午  
     if int(period) == 0:  
-        if current_time.hour < 12:  
-            return 5 if input_date == today else 1 if input_date == today + datetime.timedelta(days=1) else 3  
-        else:  
-            return 6 if input_date == today else 2 if input_date == today + datetime.timedelta(days=1) else 4  
+        return 5 if input_date == today else 1 if input_date == today + datetime.timedelta(days=1) else 3  
     else:  
-        if current_time.hour < 12:  
-            return 6 if input_date == today else 2 if input_date == today + datetime.timedelta(days=1) else 4  
-        else:  
-            return 5 if input_date == today else 1 if input_date == today + datetime.timedelta(days=1) else 3
+        return 6 if input_date == today else 2 if input_date == today + datetime.timedelta(days=1) else 4  
 
 # print(time_period("2023-12-12-0"))  # 输出 5，表示今天上午  
 # print(time_period("2023-12-12-1"))  # 输出 6，表示今天下午  
